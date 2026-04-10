@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>YouTube Downloader</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #1a1a2e;
+            color: #e0e0e0;
+            min-height: 100vh;
+            padding: 16px;
+            padding-bottom: 80px;
+        }
+        h1 {
+            text-align: center;
+            font-size: 1.4rem;
+            margin-bottom: 20px;
+            color: #e94560;
+        }
+
+        /* URL Input */
+        .url-section {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+        .url-section input {
+            flex: 1;
+            padding: 14px;
+            border-radius: 10px;
+            border: 1px solid #333;
+            background: #16213e;
+            color: #e0e0e0;
+            font-size: 16px;
+            outline: none;
+        }
+        .url-section input:focus { border-color: #e94560; }
+        .url-section button {
+            padding: 14px 20px;
+            border-radius: 10px;
+            border: none;
+            background: #e94560;
+            color: white;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+        .url-section button:active { background: #c73650; }
+        .url-section button:disabled { background: #555; cursor: not-allowed; }
+
+        /* Accordion */
+        .accordion {
+            background: #16213e;
+            border-radius: 10px;
+            margin-bottom: 16px;
+            overflow: hidden;
+        }
+        .accordion-header {
+            padding: 14px 16px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: 600;
+            user-select: none;
+        }
+        .accordion-header:active { background: #1a2744; }
+        .accordion-arrow { transition: transform 0.2s; }
+        .accordion-arrow.open { transform: rotate(180deg); }
+        .accordion-body {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+        }
+        .accordion-body.open { max-height: 400px; }
+        .accordion-body-inner { padding: 0 16px 16px; }
+        .setting-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid #2a2a4a;
+        }
+        .setting-row:last-child { border-bottom: none; }
+        .setting-row label { font-size: 14px; }
+        .setting-row select, .setting-row input[type="text"] {
+            padding: 8px 12px;
+            border-radius: 8px;
+            border: 1px solid #333;
+            background: #1a1a2e;
+            color: #e0e0e0;
+            font-size: 14px;
+        }
+
+        /* Toggle switch */
+        .toggle {
+            width: 50px; height: 28px;
+            background: #333;
+            border-radius: 14px;
+            position: relative;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .toggle.on { background: #e94560; }
+        .toggle::after {
+            content: '';
+            position: absolute;
+            width: 22px; height: 22px;
+            background: white;
+            border-radius: 50%;
+            top: 3px; left: 3px;
+            transition: transform 0.2s;
+        }
+        .toggle.on::after { transform: translateX(22px); }
+
+        /* Track list */
+        .track-actions {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 12px;
+            flex-wrap: wrap;
+        }
+        .track-actions button {
+            padding: 10px 16px;
+            border-radius: 8px;
+            border: 1px solid #333;
+            background: #16213e;
+            color: #e0e0e0;
+            font-size: 13px;
+            cursor: pointer;
+        }
+        .track-actions button:active { background: #1a2744; }
+        .btn-download {
+            background: #e94560 !important;
+            color: white !important;
+            border: none !important;
+            font-weight: 600;
+            flex: 1;
+            min-width: 200px;
+        }
+        .btn-download:active { background: #c73650 !important; }
+        .btn-download:disabled { background: #555 !important; cursor: not-allowed; }
+
+        .track-list { list-style: none; }
+        .track-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px;
+            background: #16213e;
+            border-radius: 10px;
+            margin-bottom: 8px;
+        }
+        .track-item input[type="checkbox"] {
+            width: 22px; height: 22px;
+            accent-color: #e94560;
+            flex-shrink: 0;
+        }
+        .track-thumb {
+            width: 56px; height: 42px;
+            border-radius: 6px;
+            object-fit: cover;
+            flex-shrink: 0;
+            background: #333;
+        }
+        .track-info { flex: 1; min-width: 0; }
+        .track-title {
+            font-size: 13px;
+            font-weight: 500;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .track-duration { font-size: 12px; color: #888; margin-top: 2px; }
+
+        /* Progress */
+        .progress-section { margin-top: 16px; }
+        .progress-header {
+            font-weight: 600;
+            margin-bottom: 12px;
+            font-size: 14px;
+        }
+        .progress-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 10px;
+            background: #16213e;
+            border-radius: 8px;
+            margin-bottom: 6px;
+        }
+        .progress-icon { font-size: 18px; flex-shrink: 0; width: 24px; text-align: center; }
+        .progress-info { flex: 1; min-width: 0; }
+        .progress-title {
+            font-size: 12px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .progress-bar-bg {
+            width: 100%;
+            height: 6px;
+            background: #333;
+            border-radius: 3px;
+            margin-top: 4px;
+            overflow: hidden;
+        }
+        .progress-bar-fill {
+            height: 100%;
+            background: #e94560;
+            border-radius: 3px;
+            transition: width 0.3s;
+        }
+        .progress-pct { font-size: 12px; color: #888; flex-shrink: 0; width: 40px; text-align: right; }
+
+        /* Files */
+        .files-section { margin-top: 20px; }
+        .file-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px;
+            background: #16213e;
+            border-radius: 10px;
+            margin-bottom: 8px;
+        }
+        .file-info { flex: 1; min-width: 0; }
+        .file-name {
+            font-size: 13px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .file-size { font-size: 12px; color: #888; }
+        .file-dl-btn {
+            padding: 10px 16px;
+            border-radius: 8px;
+            border: none;
+            background: #e94560;
+            color: white;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+            flex-shrink: 0;
+            margin-left: 10px;
+        }
+        .file-dl-btn:active { background: #c73650; }
+
+        /* Status message */
+        .status-msg {
+            text-align: center;
+            padding: 20px;
+            color: #888;
+            font-size: 14px;
+        }
+        .error-msg { color: #e94560; }
+
+        /* Loading spinner */
+        .spinner {
+            display: inline-block;
+            width: 18px; height: 18px;
+            border: 2px solid #555;
+            border-top-color: #e94560;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            vertical-align: middle;
+            margin-right: 8px;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* Section title */
+        .section-title {
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: #e94560;
+        }
+    </style>
+</head>
+<body>
+
+<h1>YouTube Downloader</h1>
+
+<!-- Zone 1: URL -->
+<div class="url-section">
+    <input type="text" id="urlInput" placeholder="Coller le lien de la playlist..." autocomplete="off">
+    <button id="loadBtn" onclick="loadPlaylist()">Charger</button>
+</div>
+
+<!-- Zone 2: Settings -->
+<div class="accordion">
+    <div class="accordion-header" onclick="toggleAccordion()">
+        <span>Paramètres</span>
+        <span class="accordion-arrow" id="accArrow">▼</span>
+    </div>
+    <div class="accordion-body" id="accBody">
+        <div class="accordion-body-inner">
+            <div class="setting-row">
+                <label>Format</label>
+                <select id="formatSelect">
+                    <option value="mp3" selected>MP3</option>
+                    <option value="flac">FLAC</option>
+                    <option value="opus">OPUS</option>
+                    <option value="m4a">M4A</option>
+                    <option value="mp4">MP4</option>
+                </select>
+            </div>
+            <div class="setting-row">
+                <label>Qualité</label>
+                <select id="qualitySelect">
+                    <option value="128k">128 kbps</option>
+                    <option value="192k">192 kbps</option>
+                    <option value="256k">256 kbps</option>
+                    <option value="320k" selected>320 kbps</option>
+                </select>
+            </div>
+            <div class="setting-row">
+                <label>Métadonnées</label>
+                <div class="toggle on" id="metaToggle" onclick="toggleMeta()"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Zone 3: Track list -->
+<div id="trackSection" style="display:none;">
+    <div class="section-title" id="trackCount"></div>
+    <div class="track-actions">
+        <button onclick="selectAll()">Tout sélectionner</button>
+        <button onclick="selectNone()">Désélectionner</button>
+        <button class="btn-download" id="dlBtn" onclick="startDownload()">Télécharger la sélection</button>
+    </div>
+    <ul class="track-list" id="trackList"></ul>
+</div>
+
+<!-- Zone 4: Progress -->
+<div id="progressSection" style="display:none;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+        <div class="section-title" style="margin-bottom:0;">Progression</div>
+        <button id="stopBtn" onclick="stopDownload()" style="padding:8px 16px; border-radius:8px; border:none; background:#555; color:white; font-size:13px; font-weight:600; cursor:pointer;">Arrêter</button>
+    </div>
+    <div class="progress-header" id="progressHeader"></div>
+    <div id="progressList"></div>
+</div>
+
+<!-- Zone 5: Files -->
+<div id="filesSection" style="display:none;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+        <div class="section-title" style="margin-bottom:0;">Fichiers prêts</div>
+        <button onclick="downloadAll()" style="padding:8px 16px; border-radius:8px; border:none; background:#e94560; color:white; font-size:13px; font-weight:600; cursor:pointer;">Tout enregistrer</button>
+    </div>
+    <div id="filesList"></div>
+</div>
+
+<!-- Status -->
+<div class="status-msg" id="statusMsg">Collez un lien de playlist YouTube pour commencer.</div>
+
+<script>
+    let tracks = [];
+    let metadata = true;
+    let pollInterval = null;
+
+    function formatDuration(s) {
+        if (!s) return '0:00';
+        const m = Math.floor(s / 60);
+        const sec = Math.floor(s % 60);
+        return m + ':' + String(sec).padStart(2, '0');
+    }
+
+    function toggleAccordion() {
+        document.getElementById('accBody').classList.toggle('open');
+        document.getElementById('accArrow').classList.toggle('open');
+    }
+
+    function toggleMeta() {
+        metadata = !metadata;
+        document.getElementById('metaToggle').classList.toggle('on');
+    }
+
+    function selectAll() {
+        document.querySelectorAll('#trackList input[type="checkbox"]').forEach(cb => cb.checked = true);
+    }
+
+    function selectNone() {
+        document.querySelectorAll('#trackList input[type="checkbox"]').forEach(cb => cb.checked = false);
+    }
+
+    async function loadPlaylist() {
+        const url = document.getElementById('urlInput').value.trim();
+        if (!url) return;
+
+        const btn = document.getElementById('loadBtn');
+        const msg = document.getElementById('statusMsg');
+        btn.disabled = true;
+        btn.textContent = '...';
+        msg.innerHTML = '<span class="spinner"></span> Chargement de la playlist...';
+        msg.style.display = 'block';
+        document.getElementById('trackSection').style.display = 'none';
+
+        try {
+            const res = await fetch('/api/playlist', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ url }),
+            });
+            const data = await res.json();
+
+            if (data.error) {
+                msg.innerHTML = '<span class="error-msg">' + data.error + '</span>';
+                return;
+            }
+
+            tracks = data.tracks;
+            renderTracks();
+            msg.style.display = 'none';
+        } catch (e) {
+            msg.innerHTML = '<span class="error-msg">Erreur de connexion au serveur.</span>';
+        } finally {
+            btn.disabled = false;
+            btn.textContent = 'Charger';
+        }
+    }
+
+    function renderTracks() {
+        const list = document.getElementById('trackList');
+        list.innerHTML = '';
+        document.getElementById('trackCount').textContent = tracks.length + ' morceaux';
+        document.getElementById('trackSection').style.display = 'block';
+
+        tracks.forEach((t, i) => {
+            const li = document.createElement('li');
+            li.className = 'track-item';
+            li.innerHTML = `
+                <input type="checkbox" checked data-index="${i}">
+                <img class="track-thumb" src="${t.thumbnail}" alt="" loading="lazy" onerror="this.style.display='none'">
+                <div class="track-info">
+                    <div class="track-title">${escapeHtml(t.title)}</div>
+                    <div class="track-duration">${formatDuration(t.duration)}</div>
+                </div>
+            `;
+            list.appendChild(li);
+        });
+    }
+
+    function escapeHtml(text) {
+        const d = document.createElement('div');
+        d.textContent = text;
+        return d.innerHTML;
+    }
+
+    async function startDownload() {
+        const checkboxes = document.querySelectorAll('#trackList input[type="checkbox"]');
+        const selected = [];
+        checkboxes.forEach(cb => {
+            if (cb.checked) selected.push(tracks[parseInt(cb.dataset.index)]);
+        });
+
+        if (selected.length === 0) return;
+
+        const btn = document.getElementById('dlBtn');
+        btn.disabled = true;
+        btn.textContent = 'En cours...';
+
+        const fmt = document.getElementById('formatSelect').value;
+        const quality = document.getElementById('qualitySelect').value;
+
+        try {
+            const res = await fetch('/api/download', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    tracks: selected,
+                    format: fmt,
+                    quality: quality,
+                    metadata: metadata,
+                }),
+            });
+            const data = await res.json();
+
+            if (data.error) {
+                alert(data.error);
+                btn.disabled = false;
+                btn.textContent = 'Télécharger la sélection';
+                return;
+            }
+
+            // Show progress section and start polling
+            document.getElementById('progressSection').style.display = 'block';
+            startPolling(selected);
+        } catch (e) {
+            alert('Erreur de connexion au serveur.');
+            btn.disabled = false;
+            btn.textContent = 'Télécharger la sélection';
+        }
+    }
+
+    async function stopDownload() {
+        const btn = document.getElementById('stopBtn');
+        btn.disabled = true;
+        btn.textContent = 'Arrêt...';
+        try {
+            await fetch('/api/stop', { method: 'POST' });
+        } catch (e) {}
+    }
+
+    function startPolling(selected) {
+        const trackMap = {};
+        selected.forEach(t => { trackMap[t.id] = t.title; });
+        const autoDownloaded = new Set(); // track files already auto-saved
+
+        if (pollInterval) clearInterval(pollInterval);
+
+        pollInterval = setInterval(async () => {
+            try {
+                const res = await fetch('/api/status');
+                const data = await res.json();
+
+                // Update progress header
+                document.getElementById('progressHeader').textContent =
+                    data.current + ' / ' + data.total + ' terminés';
+
+                // Update progress list
+                const container = document.getElementById('progressList');
+                container.innerHTML = '';
+                for (const [id, info] of Object.entries(data.tracks)) {
+                    const title = trackMap[id] || id;
+                    let icon = '';
+                    if (info.status === 'waiting') icon = '⏳';
+                    else if (info.status === 'downloading') icon = '⬇️';
+                    else if (info.status === 'converting') icon = '🔄';
+                    else if (info.status === 'done') icon = '✅';
+                    else if (info.status === 'error') icon = '❌';
+
+                    const pct = Math.round(info.progress);
+                    container.innerHTML += `
+                        <div class="progress-item">
+                            <span class="progress-icon">${icon}</span>
+                            <div class="progress-info">
+                                <div class="progress-title">${escapeHtml(title)}</div>
+                                <div class="progress-bar-bg">
+                                    <div class="progress-bar-fill" style="width:${pct}%"></div>
+                                </div>
+                            </div>
+                            <span class="progress-pct">${pct}%</span>
+                        </div>
+                    `;
+
+                    // Auto-download to phone as soon as a track is done
+                    if (info.status === 'done' && info.filename && !autoDownloaded.has(id)) {
+                        autoDownloaded.add(id);
+                        autoSaveFile(info.filename);
+                    }
+                }
+
+                // If done, stop polling and load files
+                if (!data.active && data.total > 0) {
+                    clearInterval(pollInterval);
+                    pollInterval = null;
+                    document.getElementById('dlBtn').disabled = false;
+                    document.getElementById('dlBtn').textContent = 'Télécharger la sélection';
+                    const stopBtn = document.getElementById('stopBtn');
+                    stopBtn.disabled = true;
+                    stopBtn.textContent = 'Arrêté';
+                    loadFiles();
+                }
+            } catch (e) {
+                // Ignore polling errors
+            }
+        }, 1000);
+    }
+
+    function autoSaveFile(filename) {
+        const a = document.createElement('a');
+        a.href = '/api/files/' + encodeURIComponent(filename);
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+    }
+
+    let allFiles = [];
+
+    async function loadFiles() {
+        try {
+            const res = await fetch('/api/files');
+            const data = await res.json();
+
+            if (!data.files || data.files.length === 0) return;
+
+            allFiles = data.files;
+            const container = document.getElementById('filesList');
+            container.innerHTML = '';
+            document.getElementById('filesSection').style.display = 'block';
+
+            data.files.forEach(f => {
+                container.innerHTML += `
+                    <div class="file-item">
+                        <div class="file-info">
+                            <div class="file-name">${escapeHtml(f.name)}</div>
+                            <div class="file-size">${f.size_mb} Mo</div>
+                        </div>
+                        <a class="file-dl-btn" href="${f.url}" download="${escapeHtml(f.name)}">Enregistrer</a>
+                    </div>
+                `;
+            });
+        } catch (e) {
+            // Ignore
+        }
+    }
+
+    function downloadAll() {
+        allFiles.forEach((f, i) => {
+            setTimeout(() => autoSaveFile(f.name), i * 500);
+        });
+    }
+</script>
+</body>
+</html>
