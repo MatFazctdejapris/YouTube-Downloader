@@ -6,7 +6,6 @@ import subprocess
 import threading
 import re
 
-import uvicorn
 from fastapi import FastAPI
 from fastapi.responses import HTMLResponse, FileResponse
 from fastapi.middleware.cors import CORSMiddleware
@@ -290,4 +289,4 @@ if __name__ == "__main__":
     print(f"\n  YouTube Downloader")
     print(f"  Local:   http://localhost:8000")
     print(f"  Mobile:  http://{ip}:8000\n")
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    subprocess.run([sys.executable, "-m", "uvicorn", "server:app", "--host", "0.0.0.0", "--port", "8000"])
